@@ -1,57 +1,36 @@
-// Core TypeScript interfaces
+export interface Variable {
+  key: string;
+  label: string;
+  description?: string;
+  example?: string;
+  required: boolean;
+  dtype: string;
+  regex_pattern?: string;
+  enum_values?: string[];
+}
+
 export interface Template {
-  id: string;
+  id: number;
   template_id: string;
   title: string;
-  description: string;
+  file_description?: string;
   doc_type: string;
-  jurisdiction: string;
+  jurisdiction?: string;
   similarity_tags: string[];
   body_md: string;
   created_at: string;
-  variables?: TemplateVariable[];
+  variables: Variable[];
 }
 
-export interface TemplateVariable {
-  id: string;
-  template_id: string;
-  key: string;
-  label: string;
-  description: string;
-  example: string;
-  required: boolean;
-  dtype: "string" | "number" | "date" | "email" | "phone";
-  regex?: string;
-  enum?: string[];
-}
-
-export interface Document {
-  id: string;
+export interface DocumentUploadResponse {
+  document_id: number;
   filename: string;
-  mime_type: string;
-  raw_text: string;
-  created_at: string;
+  extracted_text: string;
+  variables: Variable[];
 }
 
-export interface DraftInstance {
-  id: string;
-  template_id: string;
-  user_query: string;
-  answers_json: Record<string, any>;
+export interface DraftResponse {
   draft_md: string;
-  created_at: string;
-}
-
-export interface TemplateMatch {
-  template: Template;
-  confidence_score: number;
-  reasoning: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  metadata?: any;
+  template_id: string;
+  instance_id: number;
 }

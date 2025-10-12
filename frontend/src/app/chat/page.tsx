@@ -1,152 +1,167 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Send, Sparkles, FileText } from "lucide-react";
 import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
+import { getTemplates, generateDraft } from "@/lib/api";
+import type { Template } from "@/lib/types";
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    null
+  );
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [draft, setDraft] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  useEffect(() => {
+    loadTemplates();
+  }, []);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages([...messages, userMessage]);
-    setInput("");
-    setIsTyping(true);
-
-    // Simulate assistant response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content:
-          "I found a matching template for your request. Let me help you draft this document.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsTyping(false);
-    }, 1500);
+  const loadTemplates = async () => {
+    try {
+      const data = await getTemplates();
+      setTemplates(data);
+    } catch (error) {
+      console.error("Failed to load templates");
+    }
   };
 
-  const suggestions = [
-    "Draft a notice to insurer in India",
-    "Create a rental agreement for Mumbai",
-    "Generate employment termination letter",
-  ];
+  const handleTemplateSelect = (template: Template) => {
+    setSelectedTemplate(template);
+    setAnswers({});
+    setDraft("");
+  };
+
+  const handleAnswerChange = (key: string, value: string) => {
+    setAnswers({ ...answers, [key]: value });
+  };
+
+  const handleGenerateDraft = async () => {
+    if (!selectedTemplate) return;
+
+    setIsGenerating(true);
+    try {
+      const result = await generateDraft(selectedTemplate.id, answers);
+      setDraft(result.draft_md);
+    } catch (error: any) {
+      alert(error.message);
+    }
+    setIsGenerating(false);
+  };
 
   return (
     <div className="max-w-5xl mx-auto h-full flex flex-col">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">
           Legal Document Drafter
         </h1>
         <p className="text-gray-600 mt-2">
-          Describe the document you need, and I'll help you draft it
+          Select a template and fill in the details to generate your document
         </p>
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 bg-white rounded-lg shadow overflow-hidden flex flex-col">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {messages.length === 0 ? (
-            <div className="text-center py-12">
-              <Sparkles className="mx-auto mb-4 text-primary-500" size={48} />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Start a New Draft
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Try asking me to draft a legal document
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {suggestions.map((suggestion, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setInput(suggestion)}
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
+      {!selectedTemplate ? (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Select a Template</h2>
+          {templates.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  onClick={() => handleTemplateSelect(template)}
+                  className="border border-gray-200 rounded-lg p-4 hover:border-primary-500 hover:shadow-md cursor-pointer transition-all"
+                >
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    {template.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-2">
+                    {template.file_description}
+                  </p>
+                  <div className="flex gap-2">
+                    {template.similarity_tags?.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-1 bg-gray-100 rounded text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
-                    message.role === "user"
-                      ? "bg-primary-500 text-white"
-                      : "bg-gray-100 text-gray-900"
-                  }`}
-                >
-                  <p>{message.content}</p>
-                </div>
-              </div>
-            ))
+            <p className="text-gray-500">
+              No templates available. Upload a document first.
+            </p>
           )}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg p-4">
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">
+              Fill Template Variables
+            </h2>
+            <div className="space-y-4">
+              {selectedTemplate.variables.map((variable) => (
+                <div key={variable.key}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {variable.label}
+                    {variable.required && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
+                  </label>
+                  <input
+                    type={variable.dtype === "number" ? "number" : "text"}
+                    placeholder={variable.example}
+                    value={answers[variable.key] || ""}
+                    onChange={(e) =>
+                      handleAnswerChange(variable.key, e.target.value)
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {variable.description && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {variable.description}
+                    </p>
+                  )}
                 </div>
+              ))}
+            </div>
+            <div className="mt-6 flex gap-3">
+              <Button variant="ghost" onClick={() => setSelectedTemplate(null)}>
+                Back to Templates
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleGenerateDraft}
+                loading={isGenerating}
+              >
+                Generate Draft
+              </Button>
+            </div>
+          </div>
+
+          {draft && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold mb-4">Generated Draft</h2>
+              <div className="bg-gray-50 p-4 rounded-lg whitespace-pre-wrap font-serif">
+                {draft}
+              </div>
+              <div className="mt-4 flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => navigator.clipboard.writeText(draft)}
+                >
+                  Copy to Clipboard
+                </Button>
               </div>
             </div>
           )}
         </div>
-
-        {/* Input Area */}
-        <div className="border-t border-gray-200 p-4">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Describe the document you need..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-            <Button onClick={handleSend} disabled={!input.trim()}>
-              <Send size={18} />
-            </Button>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Try using slash commands: <code>/draft</code> or <code>/vars</code>
-          </p>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
