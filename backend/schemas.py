@@ -1,23 +1,23 @@
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
-class TemplateVariableBase(BaseModel):
+class VariableBase(BaseModel):
     key: str
     label: str
-    description: str
-    example: str
-    required: bool = False
+    description: Optional[str] = None
+    example: Optional[str] = None
+    required: bool = True
     dtype: str = "string"
-    regex: Optional[str] = None
-    enum: Optional[List[str]] = None
+    regex_pattern: Optional[str] = None
+    enum_values: Optional[List[str]] = None
 
-class TemplateVariableCreate(TemplateVariableBase):
+class VariableCreate(VariableBase):
     pass
 
-class TemplateVariable(TemplateVariableBase):
+class Variable(VariableBase):
     id: int
-    template_id: str
+    template_id: int
     
     class Config:
         from_attributes = True
@@ -25,39 +25,43 @@ class TemplateVariable(TemplateVariableBase):
 class TemplateBase(BaseModel):
     template_id: str
     title: str
-    description: str
+    file_description: Optional[str] = None
     doc_type: str
-    jurisdiction: str
-    similarity_tags: List[str]
+    jurisdiction: Optional[str] = None
+    similarity_tags: List[str] = []
     body_md: str
 
 class TemplateCreate(TemplateBase):
-    variables: List[TemplateVariableCreate]
+    variables: List[VariableCreate] = []
 
 class Template(TemplateBase):
     id: int
     created_at: datetime
-    variables: List[TemplateVariable] = []
+    variables: List[Variable] = []
     
     class Config:
         from_attributes = True
 
-class DocumentUploadResponse(BaseModel):
-    document_id: int
+class DocumentBase(BaseModel):
     filename: str
-    extracted_text: str
-    variables: List[TemplateVariableCreate]
+    mime_type: str
+    raw_text: str
 
-class TemplateMatchResponse(BaseModel):
-    template: Template
-    confidence_score: float
-    reasoning: str
+class DocumentCreate(DocumentBase):
+    pass
+
+class Document(DocumentBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
 class ChatRequest(BaseModel):
     query: str
 
 class GenerateDraftRequest(BaseModel):
-    template_id: str
+    template_id: int
     answers: Dict[str, Any]
 
 class DraftResponse(BaseModel):

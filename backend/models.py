@@ -9,10 +9,10 @@ class Template(Base):
     id = Column(Integer, primary_key=True, index=True)
     template_id = Column(String, unique=True, index=True)
     title = Column(String, index=True)
-    description = Column(Text)
+    file_description = Column(Text, nullable=True)
     doc_type = Column(String, index=True)
-    jurisdiction = Column(String, index=True)
-    similarity_tags = Column(JSON)  # List of strings
+    jurisdiction = Column(String, index=True, nullable=True)
+    similarity_tags = Column(JSON)
     body_md = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     
@@ -23,15 +23,15 @@ class TemplateVariable(Base):
     __tablename__ = "template_variables"
     
     id = Column(Integer, primary_key=True, index=True)
-    template_id = Column(String, ForeignKey("templates.template_id"))
+    template_id = Column(Integer, ForeignKey("templates.id"))
     key = Column(String)
     label = Column(String)
-    description = Column(Text)
-    example = Column(String)
+    description = Column(Text, nullable=True)
+    example = Column(String, nullable=True)
     required = Column(Boolean, default=False)
     dtype = Column(String, default="string")
-    regex = Column(String, nullable=True)
-    enum = Column(JSON, nullable=True)  # List of strings
+    regex_pattern = Column(String, nullable=True)
+    enum_values = Column(JSON, nullable=True)
     
     template = relationship("Template", back_populates="variables")
 
@@ -42,16 +42,15 @@ class Document(Base):
     filename = Column(String)
     mime_type = Column(String)
     raw_text = Column(Text)
-    embedding = Column(JSON, nullable=True)  # Vector embedding
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class DraftInstance(Base):
     __tablename__ = "instances"
     
     id = Column(Integer, primary_key=True, index=True)
-    template_id = Column(String, ForeignKey("templates.template_id"))
-    user_query = Column(Text)
-    answers_json = Column(JSON)  # Dict of variable answers
+    template_id = Column(Integer, ForeignKey("templates.id"))
+    user_query = Column(Text, nullable=True)
+    answers_json = Column(JSON)
     draft_md = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     

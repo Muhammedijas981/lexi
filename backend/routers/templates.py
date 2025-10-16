@@ -15,7 +15,7 @@ def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_
     db_template = models.Template(
         template_id=template.template_id,
         title=template.title,
-        description=template.description,
+        file_description=template.file_description,
         doc_type=template.doc_type,
         jurisdiction=template.jurisdiction,
         similarity_tags=template.similarity_tags,
@@ -23,19 +23,20 @@ def create_template(template: schemas.TemplateCreate, db: Session = Depends(get_
     )
     db.add(db_template)
     db.commit()
+    db.refresh(db_template)
     
     # Create variables
     for var in template.variables:
         db_var = models.TemplateVariable(
-            template_id=template.template_id,
+            template_id=db_template.id,
             key=var.key,
             label=var.label,
             description=var.description,
             example=var.example,
             required=var.required,
             dtype=var.dtype,
-            regex=var.regex,
-            enum=var.enum
+            regex_pattern=var.regex_pattern,
+            enum_values=var.enum_values
         )
         db.add(db_var)
     
@@ -51,9 +52,9 @@ def get_templates(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
     return templates
 
 @router.get("/{template_id}", response_model=schemas.Template)
-def get_template(template_id: str, db: Session = Depends(get_db)):
+def get_template(template_id: int, db: Session = Depends(get_db)):
     """Get a specific template"""
-    template = db.query(models.Template).filter(models.Template.template_id == template_id).first()
+    template = db.query(models.Template).filter(models.Template.id == template_id).first()
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     return template
